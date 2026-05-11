@@ -21,13 +21,12 @@ export default async function ExpensesPage() {
   const householdId = profile?.household_id
 
   const defaultCurrency = householdId
-    ? await supabase
+    ? (await supabase
         .from('households')
         .select('default_currency')
         .eq('id', householdId)
         .single()
-        .then(r => (r.data as any)?.default_currency ?? 'USD')
-        .catch(() => 'USD')
+      ).data?.default_currency ?? 'USD'
     : 'USD'
 
   const [expensesRes, newSplitsRes, allSplitsRes, membersRes, settlementsRes] = await Promise.all([
