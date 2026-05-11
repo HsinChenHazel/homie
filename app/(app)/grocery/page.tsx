@@ -16,10 +16,10 @@ export default async function GroceryPage() {
     .single()
 
   const householdId = profile?.household_id
-  const defaultCurrency = await (householdId
-    ? supabase.from('households').select('default_currency').eq('id', householdId).single()
-        .then(r => (r.data as any)?.default_currency ?? 'USD').catch(() => 'USD')
-    : Promise.resolve('USD'))
+  const defaultCurrency = householdId
+    ? (await supabase.from('households').select('default_currency').eq('id', householdId).single())
+        .data?.default_currency ?? 'USD'
+    : 'USD'
 
   const [itemsRes, membersRes, historyRes] = await Promise.all([
     householdId
