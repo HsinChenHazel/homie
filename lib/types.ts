@@ -53,13 +53,3 @@ export type ChoreAssignment = {
   profile?: Profile
 }
 
-export type GroceryItem = {
-  id: string
-  household_id: string
-  name: string
-  quantity: string | null
-  added_by: string
-  checked_off: boolean
-  created_at: string
-  added_by_profile?: Profile
-}

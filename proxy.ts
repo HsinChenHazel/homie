@@ -28,13 +28,14 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/join') || pathname.startsWith('/signup')
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/join') || pathname.startsWith('/signup') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password') || pathname.startsWith('/auth/')
+  const isResetRoute = pathname.startsWith('/reset-password') || pathname.startsWith('/auth/')
 
   if (!user && !isAuthRoute) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && isAuthRoute) {
+  if (user && isAuthRoute && !isResetRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -42,5 +43,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)).*)'],
 }

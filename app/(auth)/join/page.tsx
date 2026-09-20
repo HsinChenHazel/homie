@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { joinWithSignupAction } from '@/app/actions'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 export default function JoinPage() {
   const { message } = App.useApp()
@@ -47,7 +47,7 @@ export default function JoinPage() {
   return (
     <Card style={{ width: 420 }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>🏠 Homie</Title>
+        <img src="/homie_logo.svg" alt="Homie" style={{ height: 36 }} />
         <Text type="secondary">Join your household</Text>
       </div>
 

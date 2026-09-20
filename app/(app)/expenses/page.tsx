@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ExpenseList from '@/components/expenses/ExpenseList'
 import BalanceSummary from '@/components/BalanceSummary'
-import SettlementCard from '@/components/SettlementCard'
 import { calculateBalances } from '@/lib/balances'
 
 export default async function ExpensesPage() {
@@ -82,7 +81,7 @@ export default async function ExpensesPage() {
     ? calculateBalances(newSplits as any, Array.from(newExpenseMap.values()))
     : null
 
-  // Merged balance — all unsettled (used when recalculating over a pending settlement)
+  // Merged balance — ALL unsettled splits (covers carry-forward from all pending settlements)
   const allExpenseMap = new Map()
   for (const s of allSplits) {
     const e = (s as any).expense
@@ -93,21 +92,18 @@ export default async function ExpensesPage() {
     : null
 
   const pendingSettlementItems = pendingSettlements.flatMap((s: any) =>
-    (s.settlement_items ?? []).map((item: any) => ({
-      fromName: item.from_profile?.display_name ?? '',
-      toName: item.to_profile?.display_name ?? '',
-      amount: item.amount,
-    }))
+    (s.settlement_items ?? [])
+      .filter((item: any) => !item.paid_at)
+      .map((item: any) => ({
+        fromName: item.from_profile?.display_name ?? '',
+        toName: item.to_profile?.display_name ?? '',
+        amount: item.amount,
+      }))
   )
 
   return (
     <div>
       <h2 style={{ marginBottom: 16 }}>Expenses</h2>
-
-      {/* Active pending settlements */}
-      {pendingSettlements.map((s: any) => (
-        <SettlementCard key={s.id} settlement={s} currentUserId={user.id} />
-      ))}
 
       {/* Balance card: only show new expenses not yet in any settlement */}
       {householdId && (balanceData?.transactions.length ?? 0) > 0 && (

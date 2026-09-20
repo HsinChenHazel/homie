@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">House Fund icon</title>
+  <desc id="desc">A minimalist sage-green house and leaf mark with a transparent curved cutout.</desc>
+
+  <!-- Chimney -->
+  <path
+    fill="#82957F"
+    d="M242 30h21c6.1 0 11 4.9 11 11v94h-43V41c0-6.1 4.9-11 11-11Z"
+  />
+
+  <!-- House / leaf silhouette with a transparent negative-space arc -->
+  <path
+    fill="#82957F"
+    fill-rule="evenodd"
+    clip-rule="evenodd"
+    d="
+      M40.6 122.7 138.2 29c8.3-8 20.9-8.4 29.7-.9l111 94.5
+      c7.1 6 11.1 14.6 11.1 23.9v61.8
+      c0 53.1-38.3 88.7-92.4 88.7H90.1
+      C53.8 297 30 273.4 30 237.8v-91.9
+      c0-9 3.8-17.4 10.6-23.2Z
+
+      M101.2 297
+      c6.8-53 36.1-94.7 85.8-118.2
+      30.1-14.3 63.8-21.5 103-21.5v23.9
+      c-38.3-.7-70.7 5.2-99.5 18.9
+      -42.2 20-60.8 53.7-67.4 96.9h-21.9Z
+    "
+  />
+</svg>

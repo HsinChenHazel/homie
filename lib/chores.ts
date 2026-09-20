@@ -1,7 +1,7 @@
 export type RotationSlot = {
   slot_index: number
   user_id: string
-  profile: { id: string; display_name: string }
+  profile: { id: string; display_name: string } | null
 }
 
 export type ChoreWithSlot = {
@@ -14,6 +14,24 @@ export type MonthlyAssignment = {
   chore: ChoreWithSlot
   userId: string
   displayName: string
+}
+
+/** Returns all Monday dates (YYYY-MM-DD) for weeks that overlap the given month */
+export function getWeeksInMonth(year: number, month: number): string[] {
+  const weeks: string[] = []
+  const lastDay = new Date(year, month, 0)
+  const first = new Date(year, month - 1, 1)
+  const dow = first.getDay()
+  first.setDate(first.getDate() + (dow === 0 ? -6 : 1 - dow))
+  let cur = new Date(first)
+  while (cur <= lastDay) {
+    const y = cur.getFullYear()
+    const m = String(cur.getMonth() + 1).padStart(2, '0')
+    const d = String(cur.getDate()).padStart(2, '0')
+    weeks.push(`${y}-${m}-${d}`)
+    cur.setDate(cur.getDate() + 7)
+  }
+  return weeks
 }
 
 /** Returns the Monday of the week containing `date` as a YYYY-MM-DD string */
@@ -37,14 +55,15 @@ export function getMonthlyAssignments(
   targetYear: number,
   targetMonth: number
 ): MonthlyAssignment[] {
-  if (!slots.length || !chores.length) return []
+  const validSlots = slots.filter(s => s.profile !== null)
+  if (!validSlots.length || !chores.length) return []
 
   const monthOffset =
     (targetYear * 12 + targetMonth) - (startYear * 12 + startMonth)
-  const n = slots.length
+  const n = validSlots.length
 
   const sortedChores = [...chores].sort((a, b) => a.slot_index - b.slot_index)
-  const sortedSlots = [...slots].sort((a, b) => a.slot_index - b.slot_index)
+  const sortedSlots = [...validSlots].sort((a, b) => a.slot_index - b.slot_index)
 
   return sortedChores.map((chore, i) => {
     const personIndex = ((i + monthOffset) % n + n) % n
@@ -52,7 +71,7 @@ export function getMonthlyAssignments(
     return {
       chore,
       userId: slot.user_id,
-      displayName: slot.profile.display_name,
+      displayName: slot.profile!.display_name,
     }
   })
 }

@@ -6,7 +6,7 @@ import { PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-de
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { Profile } from '@/lib/types'
 import AddExpenseModal from './AddExpenseModal'
-import { deleteExpenseAction } from '@/app/actions'
+import { deleteExpenseAction, clearAllExpensesAction } from '@/app/actions'
 
 const { Text } = Typography
 const DELETE_WIDTH = 72
@@ -20,10 +20,9 @@ type Props = {
 }
 
 function getStatus(r: any) {
+  if (r.status === 'settled') return <Tag color="success">Settled</Tag>
   const splits = r.splits ?? []
-  const allSettled = splits.length > 0 && splits.every((s: any) => s.settled)
-  const inSettlement = !allSettled && splits.some((s: any) => s.settlement_id)
-  if (allSettled) return <Tag color="success">Settled</Tag>
+  const inSettlement = splits.some((s: any) => s.settlement_id && !s.settled)
   if (inSettlement) return <Tag color="processing">In Settlement</Tag>
   return <Tag>Unsettled</Tag>
 }
@@ -63,7 +62,7 @@ function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDel
       <div
         style={{
           position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_WIDTH,
-          background: '#ff4d4f', display: 'flex', alignItems: 'center',
+          background: '#DC3545', display: 'flex', alignItems: 'center',
           justifyContent: 'center', cursor: 'pointer',
         }}
         onClick={onDelete}
@@ -93,6 +92,8 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
   const [open, setOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; inSettlement: boolean } | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [clearAllOpen, setClearAllOpen] = useState(false)
+  const [clearingAll, setClearingAll] = useState(false)
 
   useEffect(() => {
     if (searchParams.get('new') === '1' && householdId) {
@@ -110,6 +111,15 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
     setDeleteTarget({ id: r.id, inSettlement })
   }
 
+  async function confirmClearAll() {
+    if (!householdId) return
+    setClearingAll(true)
+    await clearAllExpensesAction(householdId)
+    setClearingAll(false)
+    setClearAllOpen(false)
+    router.refresh()
+  }
+
   async function confirmDelete() {
     if (!deleteTarget) return
     setDeleting(true)
@@ -123,6 +133,13 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
     { title: 'Date', dataIndex: 'date', key: 'date', width: 110 },
     { title: 'Description', dataIndex: 'title', key: 'title' },
     { title: 'Paid by', key: 'paid_by', render: (_: any, r: any) => r.paid_by_profile?.display_name ?? '—' },
+    {
+      title: 'Split by', key: 'split',
+      render: (_: any, r: any) => {
+        const names = (r.splits ?? []).map((s: any) => s.profile?.display_name).filter(Boolean)
+        return names.join(', ') || '—'
+      },
+    },
     {
       title: 'Amount', dataIndex: 'amount', key: 'amount',
       render: (v: number, r: any) => `${r.currency ?? defaultCurrency} ${Number(v).toFixed(2)}`,
@@ -140,7 +157,7 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
   return (
     <>
       {!isMobile && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)} disabled={!householdId}>
             Add Expense
           </Button>
@@ -149,7 +166,9 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
 
       {isMobile ? (
         <div>
-          <Text strong style={{ display: 'block', marginBottom: 10, fontSize: 15 }}>All Expenses</Text>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text strong style={{ fontSize: 15 }}>All Expenses</Text>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {expenses.length === 0 ? (
               <Text type="secondary" style={{ textAlign: 'center', display: 'block', padding: '32px 0' }}>
@@ -179,6 +198,11 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
                       </Text>
                       {getStatus(r)}
                     </div>
+                    {(r.splits ?? []).length > 0 && (
+                      <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                        {(r.splits as any[]).map((s: any) => s.profile?.display_name).filter(Boolean).join(', ')}
+                      </Text>
+                    )}
                   </div>
                 </SwipeableRow>
               ))
@@ -205,6 +229,19 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
           defaultCurrency={defaultCurrency}
         />
       )}
+
+      <Modal
+        open={clearAllOpen}
+        onCancel={() => setClearAllOpen(false)}
+        onOk={confirmClearAll}
+        okText="Clear All"
+        okButtonProps={{ danger: true, loading: clearingAll }}
+        cancelButtonProps={{ disabled: clearingAll }}
+        title="Clear all expenses?"
+        centered
+      >
+        <Text>This will permanently delete all {expenses.length} expense{expenses.length !== 1 ? 's' : ''} and settlements. This action cannot be undone.</Text>
+      </Modal>
 
       <Modal
         open={!!deleteTarget}

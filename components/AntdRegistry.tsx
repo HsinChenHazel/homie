@@ -20,9 +20,18 @@ export default function AntdRegistry({ children }: { children: React.ReactNode }
       <ConfigProvider
         theme={{
           token: {
-            colorPrimary: '#4361EE',
-            colorLink: '#4361EE',
+            colorPrimary: '#82957F',
+            colorLink: '#82957F',
+            colorError: '#DC3545',
             borderRadius: 8,
+          },
+          components: {
+            Menu: {
+              itemSelectedColor: '#3D5238',
+            },
+            Card: {
+              headerFontSize: 14,
+            },
           },
         }}
       >

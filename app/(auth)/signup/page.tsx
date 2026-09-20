@@ -8,7 +8,7 @@ import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { signUpAction } from '@/app/actions'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 export default function SignupPage() {
   const [loading, setLoading] = useState(false)
@@ -30,7 +30,7 @@ export default function SignupPage() {
     return (
       <Card style={{ width: 380 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <Title level={2} style={{ margin: 0 }}>🏠 Homie</Title>
+          <img src="/homie_logo.svg" alt="Homie" style={{ height: 36 }} />
         </div>
         <Alert
           type="success"
@@ -50,7 +50,7 @@ export default function SignupPage() {
   return (
     <Card style={{ width: 380 }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>🏠 Homie</Title>
+        <img src="/homie_logo.svg" alt="Homie" style={{ height: 36 }} />
         <Text type="secondary">Create your account</Text>
       </div>
 

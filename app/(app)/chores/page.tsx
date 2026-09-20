@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ChoreBoard from '@/components/chores/ChoreBoard'
-import { getWeekStart } from '@/lib/chores'
+import { getWeeksInMonth } from '@/lib/chores'
 
 export default async function ChoresPage() {
   const supabase = await createClient()
@@ -18,7 +18,8 @@ export default async function ChoresPage() {
 
   const householdId = profile?.household_id
   const household = (profile?.household as any) ?? null
-  const weekOf = getWeekStart()
+  const now = new Date()
+  const monthWeeks = getWeeksInMonth(now.getFullYear(), now.getMonth() + 1)
 
   const [choresRes, rotationRes, completionsRes, membersRes] = await Promise.all([
     householdId
@@ -39,7 +40,7 @@ export default async function ChoresPage() {
       ? supabase
           .from('chore_completions')
           .select('chore_id, user_id, week_of')
-          .eq('week_of', weekOf)
+          .in('week_of', monthWeeks)
           .in(
             'chore_id',
             await supabase

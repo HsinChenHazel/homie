@@ -3,13 +3,12 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { Button, Card, Form, Input, Typography, Divider, Alert } from 'antd'
+import { Button, Card, Form, Input, Divider, Alert } from 'antd'
 import { MailOutlined, LockOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const { Title, Text } = Typography
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,11 +36,10 @@ export default function LoginPage() {
   return (
     <Card style={{ width: 380 }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>🏠 Homie</Title>
-        <Text type="secondary">Sign in to your account</Text>
+        <img src="/homie_logo.svg" alt="Homie" style={{ height: 60 }} />
       </div>
 
-      {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} showIcon />}
+      {error && <Alert type="error" title={error} style={{ marginBottom: 16 }} showIcon />}
       <Form layout="vertical" onFinish={onFinish} requiredMark={false}>
         <Form.Item name="email" rules={[{ required: true, type: 'email' }]}>
           <Input prefix={<MailOutlined />} placeholder="Email" size="large" />
@@ -55,6 +53,12 @@ export default function LoginPage() {
           </Button>
         </Form.Item>
       </Form>
+
+      <div style={{ textAlign: 'center', marginBottom: 8 }}>
+        <Link href="/forgot-password" style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)' }}>
+          Forgot password?
+        </Link>
+      </div>
 
       <Divider plain>New here?</Divider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

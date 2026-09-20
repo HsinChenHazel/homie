@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { App, Card, Button, Typography, Grid } from 'antd'
-import { ArrowRightOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { App, Card, Button, Typography } from 'antd'
+import { CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { markPaidAction } from '@/app/actions'
 import { useRouter } from 'next/navigation'
 import { utilityLabel, utilityIcon } from '@/components/expenses/AddExpenseModal'
@@ -68,10 +68,12 @@ export default function SettlementCard({ settlement, currentUserId }: Props) {
   const { message } = App.useApp()
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
-  const isMobile = Grid.useBreakpoint().md === false
 
-  const hasItems = settlement.settlement_items.length > 0
-  const allPaid = hasItems && settlement.settlement_items.every(i => i.paid_at !== null)
+  const myDebts = settlement.settlement_items.filter(i => i.from_user_id === currentUserId && !i.paid_at)
+  const owedToMe = settlement.settlement_items.filter(i => i.to_user_id === currentUserId && !i.paid_at)
+
+  if (myDebts.length === 0 && owedToMe.length === 0) return null
+
   const utilityTags: string[] = Array.from(new Set(
     (settlement.linked_splits ?? [])
       .map(s => s.expense)
@@ -79,130 +81,108 @@ export default function SettlementCard({ settlement, currentUserId }: Props) {
       .map(e => e!.utility_category!)
   ))
 
-  if (!hasItems) return null
-
   async function handleMarkPaid(itemId: string) {
     setLoadingId(itemId)
     const result = await markPaidAction(itemId)
     setLoadingId(null)
-    if (result.error) {
-      message.error(result.error)
-      return
-    }
+    if (result.error) { message.error(result.error); return }
     message.success('Marked as paid!')
     router.refresh()
   }
 
-  const titleRow = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      {allPaid
-        ? <CheckCircleOutlined style={{ color: '#4361EE' }} />
-        : <ClockCircleOutlined style={{ color: '#faad14' }} />
-      }
-      <span>Settlement</span>
-      <span style={{
-        fontSize: 12,
-        fontWeight: 400,
-        color: allPaid ? '#4361EE' : '#d46b08',
-        background: allPaid ? 'transparent' : '#fff7e6',
-        border: `1px solid ${allPaid ? '#4361EE' : '#ffd591'}`,
-        borderRadius: 4,
-        padding: '0 6px',
-        lineHeight: '20px',
-      }}>
-        {allPaid ? 'Complete' : 'Pending'}
-      </span>
-      {utilityTags.map(cat => (
-        <span key={cat} style={{
-          fontSize: 11,
-          fontWeight: 400,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 3,
-          color: '#595959',
-          background: '#f5f5f5',
-          border: '1px solid #d9d9d9',
-          borderRadius: 4,
-          padding: '0 6px',
-          lineHeight: '20px',
-        }}>
-          {utilityIcon(cat)}{utilityLabel(cat)}
-        </span>
-      ))}
-    </div>
-  )
-
-  const metaText = (
-    <Text type="secondary" style={{ fontSize: 11 }}>
-      Initiated by {settlement.created_by_profile?.display_name ?? 'someone'} · {settlement.expense_count} expense{settlement.expense_count !== 1 ? 's' : ''} · {settlement.created_at.slice(0, 10)}
-    </Text>
+  const sectionLabel = (text: string) => (
+    <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 6 }}>{text}</Text>
   )
 
   return (
     <Card
       style={{ marginBottom: 16 }}
-      title={titleRow}
-      extra={!isMobile ? metaText : undefined}
-    >
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {settlement.settlement_items.map(item => {
-          const isMyDebt = item.from_user_id === currentUserId
-          const isPaid = item.paid_at !== null
-
-          return (
-            <div
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                padding: '10px 14px',
-                background: isPaid ? '#f6ffed' : '#fafafa',
-                borderRadius: 8,
-                border: `1px solid ${isPaid ? '#b7eb8f' : '#f0f0f0'}`,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                <MiniAvatar profile={item.from_profile} />
-                <Text strong style={{ color: isPaid ? '#8c8c8c' : '#cf1322' }}>
-                  {item.from_profile?.display_name ?? '?'}
-                </Text>
-                <ArrowRightOutlined style={{ color: '#4361EE', fontSize: 13 }} />
-                <MiniAvatar profile={item.to_profile} />
-                <Text strong style={{ color: isPaid ? '#8c8c8c' : '#4361EE' }}>
-                  {item.to_profile?.display_name ?? '?'}
-                </Text>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Text style={{ color: isPaid ? '#8c8c8c' : undefined, textDecoration: isPaid ? 'line-through' : undefined }}>
-                  ${Number(item.amount).toFixed(2)}
-                </Text>
-                {isPaid && <CheckCircleOutlined style={{ color: '#4361EE', fontSize: 13 }} />}
-              </div>
-
-              {isMyDebt && !isPaid && (
-                <Button
-                  type="primary"
-                  size="small"
-                  loading={loadingId === item.id}
-                  onClick={() => handleMarkPaid(item.id)}
-                  style={{ fontSize: 11, padding: '0 8px', height: 24 }}
-                >
-                  I&apos;ve paid
-                </Button>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {isMobile && (
-        <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 12, paddingTop: 10 }}>
-          {metaText}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span>Settlement</span>
+          <Text type="secondary" style={{ fontWeight: 400, fontSize: 12 }}>
+            · {settlement.created_at.slice(0, 10)}
+          </Text>
+          {utilityTags.map(cat => (
+            <span key={cat} style={{
+              fontSize: 11, fontWeight: 400,
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              color: '#595959', background: '#f5f5f5',
+              border: '1px solid #d9d9d9', borderRadius: 4,
+              padding: '0 6px', lineHeight: '20px',
+            }}>
+              {utilityIcon(cat)}{utilityLabel(cat)}
+            </span>
+          ))}
         </div>
-      )}
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {myDebts.length > 0 && (
+          <div>
+            {sectionLabel('You owe')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {myDebts.map(item => (
+                <div key={item.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 14px', background: '#fafafa',
+                  borderRadius: 8, border: '1px solid #f0f0f0',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <MiniAvatar profile={item.to_profile} />
+                    <Text strong>
+                      {item.to_profile?.display_name ?? '?'}
+                    </Text>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Text strong>${Number(item.amount).toFixed(2)}</Text>
+                    <Button
+                      type="primary"
+                      size="small"
+                      loading={loadingId === item.id}
+                      onClick={() => handleMarkPaid(item.id)}
+                      style={{ fontSize: 11, padding: '0 8px', height: 24 }}
+                    >
+                      I&apos;ve paid
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {owedToMe.length > 0 && (
+          <div>
+            {sectionLabel("You're owed")}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {owedToMe.map(item => (
+                <div key={item.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 14px', background: '#fafafa',
+                  borderRadius: 8, border: '1px solid #f0f0f0',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <MiniAvatar profile={item.from_profile} />
+                    <Text style={{ color: '#595959' }}>
+                      {item.from_profile?.display_name ?? '?'}
+                    </Text>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Text strong>${Number(item.amount).toFixed(2)}</Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ClockCircleOutlined style={{ color: '#bfbfbf', fontSize: 12 }} />
+                      <Text type="secondary" style={{ fontSize: 11 }}>Waiting</Text>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
     </Card>
   )
 }

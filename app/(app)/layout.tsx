@@ -7,7 +7,6 @@ import {
   DashboardOutlined,
   WalletOutlined,
   CalendarOutlined,
-  ShoppingCartOutlined,
   SettingOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -24,7 +23,6 @@ const navItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/expenses', icon: <WalletOutlined />, label: 'Expenses' },
   { key: '/chores', icon: <CalendarOutlined />, label: 'Chores' },
-  { key: '/grocery', icon: <ShoppingCartOutlined />, label: 'Grocery' },
   { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
 ]
 
@@ -32,7 +30,7 @@ const mobileNavItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Home' },
   { key: '/expenses', icon: <WalletOutlined />, label: 'Expenses' },
   { key: '/chores', icon: <CalendarOutlined />, label: 'Chores' },
-  { key: '/grocery', icon: <ShoppingCartOutlined />, label: 'Grocery' },
+  { key: '/settings', icon: <SettingOutlined />, label: 'Settings' },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -65,23 +63,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           height: 48,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
           padding: '0 16px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Home size={16} />
-            <Text strong style={{ fontSize: 16 }}>Homie</Text>
-          </div>
-          <button
-            onClick={() => router.push('/settings')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-              color: activeKey === '/settings' ? '#4361EE' : token.colorTextSecondary,
-              display: 'flex', alignItems: 'center', fontSize: 18,
-            }}
-          >
-            <SettingOutlined />
-          </button>
+          <img src="/homie_logo.png" alt="Homie" style={{ height: 52 }} />
         </header>
 
         <Content style={{ padding: 16, paddingBottom: 80, maxWidth: 1100, width: '100%', margin: '0 auto' }}>
@@ -107,7 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <button key={item.key} onClick={() => router.push(item.key)} style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', gap: 3, border: 'none', background: 'none',
-                cursor: 'pointer', color: active ? '#4361EE' : token.colorTextSecondary, padding: 0,
+                cursor: 'pointer', color: active ? '#82957F' : token.colorTextSecondary, padding: 0,
               }}>
                 <span style={{ fontSize: 20 }}>{item.icon}</span>
                 <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{item.label}</span>
@@ -122,7 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               style={{
                 width: 48, height: 48,
                 borderRadius: '50%',
-                background: '#4361EE',
+                background: '#82957F',
                 border: 'none',
                 cursor: 'pointer',
                 color: '#fff',
@@ -144,7 +128,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <button key={item.key} onClick={() => router.push(item.key)} style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', gap: 3, border: 'none', background: 'none',
-                cursor: 'pointer', color: active ? '#4361EE' : token.colorTextSecondary, padding: 0,
+                cursor: 'pointer', color: active ? '#82957F' : token.colorTextSecondary, padding: 0,
               }}>
                 <span style={{ fontSize: 20 }}>{item.icon}</span>
                 <span style={{ fontSize: 10, fontWeight: active ? 600 : 400 }}>{item.label}</span>
@@ -180,9 +164,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           padding: collapsed ? 0 : '0 20px',
           borderBottom: `1px solid ${token.colorBorderSecondary}`,
         }}>
-          <Text strong style={{ fontSize: collapsed ? 20 : 18 }}>
-            {collapsed ? <Home size={20} /> : <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Home size={16} /> Homie</span>}
-          </Text>
+          {collapsed ? <Home size={20} /> : <img src="/homie_logo.png" alt="Homie" style={{ height: 52 }} />}
         </div>
 
         <Menu

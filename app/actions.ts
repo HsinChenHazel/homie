@@ -114,17 +114,34 @@ export async function createSettlementAction(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  // 0. Cancel any existing pending settlements (unlink splits, then delete)
+  // 0. Process all pending settlements before creating the new comprehensive one
   if (cancelSettlementIds.length) {
+    // Free up unsettled splits so they can be re-linked to the new settlement
     await supabase
       .from('expense_splits')
       .update({ settlement_id: null })
       .in('settlement_id', cancelSettlementIds)
+      .eq('settled', false)
 
-    await supabase
-      .from('settlements')
-      .delete()
-      .in('id', cancelSettlementIds)
+    // Settlements with any paid items → mark complete (preserve paid history)
+    // Settlements with no paid items → delete entirely (clean slate)
+    const { data: paidItems } = await supabase
+      .from('settlement_items')
+      .select('settlement_id')
+      .in('settlement_id', cancelSettlementIds)
+      .not('paid_at', 'is', null)
+
+    const partiallyPaidIds = new Set((paidItems ?? []).map((i: any) => i.settlement_id))
+
+    const toComplete = cancelSettlementIds.filter(id => partiallyPaidIds.has(id))
+    const toDelete = cancelSettlementIds.filter(id => !partiallyPaidIds.has(id))
+
+    if (toComplete.length) {
+      await supabase.from('settlements').update({ status: 'complete' }).in('id', toComplete)
+    }
+    if (toDelete.length) {
+      await supabase.from('settlements').delete().in('id', toDelete)
+    }
   }
 
   // 1. Create settlement record
@@ -302,10 +319,17 @@ export async function markPaidAction(settlementItemId: string) {
     .update({ paid_at: new Date().toISOString() })
     .eq('id', settlementItemId)
     .eq('from_user_id', user.id)
-    .select('settlement_id')
+    .select('settlement_id, from_user_id')
     .single()
 
   if (markErr || !item) return { error: 'Could not mark as paid' }
+
+  // Immediately settle this payer's splits so they don't appear in future balance calculations
+  await supabase
+    .from('expense_splits')
+    .update({ settled: true })
+    .eq('settlement_id', item.settlement_id)
+    .eq('user_id', item.from_user_id)
 
   // Check if all items in this settlement are now paid
   const { data: unpaid } = await supabase
@@ -315,7 +339,7 @@ export async function markPaidAction(settlementItemId: string) {
     .is('paid_at', null)
 
   if (!unpaid?.length) {
-    // Everyone paid — lock the expenses and complete the settlement
+    // Everyone paid — lock any remaining splits and complete the settlement
     await supabase
       .from('expense_splits')
       .update({ settled: true })
@@ -325,6 +349,65 @@ export async function markPaidAction(settlementItemId: string) {
       .from('settlements')
       .update({ status: 'complete' })
       .eq('id', item.settlement_id)
+
+    // Mark expenses as settled where all their splits are now settled
+    const { data: linkedExpenses } = await supabase
+      .from('expense_splits')
+      .select('expense_id')
+      .eq('settlement_id', item.settlement_id)
+
+    const expenseIds = [...new Set((linkedExpenses ?? []).map((r: any) => r.expense_id))]
+    for (const expenseId of expenseIds) {
+      const { data: unsettledSplits } = await supabase
+        .from('expense_splits')
+        .select('id')
+        .eq('expense_id', expenseId)
+        .eq('settled', false)
+      if (!unsettledSplits?.length) {
+        await supabase.from('expenses').update({ status: 'settled' }).eq('id', expenseId)
+      }
+    }
+  }
+
+  revalidatePath('/expenses')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
+export async function markAllSettledAction(settlementId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const now = new Date().toISOString()
+
+  const { error: updateErr } = await supabase
+    .from('settlement_items')
+    .update({ paid_at: now })
+    .eq('settlement_id', settlementId)
+    .is('paid_at', null)
+
+  if (updateErr) return { error: 'Could not mark all as settled' }
+
+  await supabase
+    .from('expense_splits')
+    .update({ settled: true })
+    .eq('settlement_id', settlementId)
+
+  await supabase
+    .from('settlements')
+    .update({ status: 'complete' })
+    .eq('id', settlementId)
+
+  // Mark linked expenses as settled
+  const { data: linkedExpenses } = await supabase
+    .from('expense_splits')
+    .select('expense_id')
+    .eq('settlement_id', settlementId)
+
+  const expenseIds = [...new Set((linkedExpenses ?? []).map((r: any) => r.expense_id))]
+  if (expenseIds.length) {
+    await supabase.from('expenses').update({ status: 'settled' }).in('id', expenseIds)
   }
 
   revalidatePath('/expenses')
@@ -512,6 +595,76 @@ export async function deleteExpenseAction(expenseId: string) {
   }
 
   revalidatePath('/expenses')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
+export async function clearAllExpensesAction(householdId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  // Verify caller belongs to this household
+  const { data: caller } = await supabase
+    .from('profiles')
+    .select('household_id')
+    .eq('id', user.id)
+    .single()
+
+  if (caller?.household_id !== householdId) return { error: 'Not authorized' }
+
+  // Delete settlements first (settlement_items cascade), then expenses (splits cascade)
+  await supabase.from('settlements').delete().eq('household_id', householdId)
+  const { error } = await supabase.from('expenses').delete().eq('household_id', householdId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/expenses')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
+export async function removeMemberAction(memberId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (memberId === user.id) return { error: 'Cannot remove yourself' }
+
+  const { error } = await supabase.rpc('remove_household_member', { target_user_id: memberId })
+  if (error) return { error: error.message }
+
+  revalidatePath('/settings')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
+export async function addNoteAction(householdId: string, content: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase.from('household_notes').insert({
+    household_id: householdId,
+    user_id: user.id,
+    content: content.trim(),
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
+export async function deleteNoteAction(noteId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('household_notes')
+    .delete()
+    .eq('id', noteId)
+    .eq('user_id', user.id)
+  if (error) return { error: error.message }
+
   revalidatePath('/dashboard')
   return { data: true }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   App, Modal, Form, Input, InputNumber, DatePicker, Select,
   Button, Typography, Divider, Row, Col, Tabs, Tag
@@ -54,6 +54,14 @@ export default function AddExpenseModal({
   const [utilityCategory, setUtilityCategory] = useState<string>('')
   const [form] = Form.useForm()
   const [utilityForm] = Form.useForm()
+
+  useEffect(() => {
+    if (open) {
+      const ids = members.map(m => m.id)
+      form.setFieldsValue({ split_members: ids })
+      utilityForm.setFieldsValue({ split_members: ids })
+    }
+  }, [open, members])
 
   function handleClose() {
     onClose()
@@ -202,9 +210,9 @@ export default function AddExpenseModal({
                 padding: '5px 12px',
                 fontSize: 13,
                 borderRadius: 6,
-                border: `1px solid ${utilityCategory === c.key ? '#4361EE' : '#d9d9d9'}`,
-                background: utilityCategory === c.key ? '#eef1ff' : '#fafafa',
-                color: utilityCategory === c.key ? '#4361EE' : undefined,
+                border: `1px solid ${utilityCategory === c.key ? '#82957F' : '#d9d9d9'}`,
+                background: utilityCategory === c.key ? '#F0F4EE' : '#fafafa',
+                color: utilityCategory === c.key ? '#82957F' : undefined,
                 userSelect: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',

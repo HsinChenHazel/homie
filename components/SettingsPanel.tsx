@@ -4,7 +4,7 @@ import { useState } from 'react'
 import {
   App, Card, Form, Input, Button, Typography, Divider, Tag, Space, Select, Modal
 } from 'antd'
-import { CopyOutlined, PlusOutlined, CheckOutlined, LogoutOutlined } from '@ant-design/icons'
+import { CopyOutlined, PlusOutlined, CheckOutlined, LogoutOutlined, UserDeleteOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -13,11 +13,12 @@ import {
   updateDisplayNameAction,
   updateHouseholdCurrencyAction,
   updateAvatarAction,
+  removeMemberAction,
 } from '@/app/actions'
 
 const AVATAR_COLORS = [
   '#FF6B6B', '#FF9F43', '#FECA57', '#48DBFB',
-  '#1DD1A1', '#4361EE', '#A29BFE', '#FD79A8',
+  '#1DD1A1', '#82957F', '#A29BFE', '#FD79A8',
   '#636E72', '#2D3436',
 ]
 
@@ -48,12 +49,13 @@ type Props = {
 }
 
 export default function SettingsPanel({ profile, members }: Props) {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const router = useRouter()
   const [nameLoading, setNameLoading] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [joinLoading, setJoinLoading] = useState(false)
   const [currencyLoading, setCurrencyLoading] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const [avatarColor, setAvatarColor] = useState<string>(profile?.avatar_color ?? AVATAR_COLORS[0])
   const [avatarInitials, setAvatarInitials] = useState<string>(profile?.avatar_initials ?? '')
@@ -129,6 +131,23 @@ export default function SettingsPanel({ profile, members }: Props) {
     message.success('Default currency updated')
   }
 
+  async function removeMember(memberId: string, name: string) {
+    modal.confirm({
+      title: `Remove ${name}?`,
+      content: 'They will be removed from the household and need a new invite to rejoin.',
+      okText: 'Remove',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setRemovingId(memberId)
+        const result = await removeMemberAction(memberId)
+        setRemovingId(null)
+        if (result.error) { message.error(result.error); return }
+        message.success(`${name} removed`)
+        router.refresh()
+      },
+    })
+  }
+
   function copyInviteCode() {
     if (household?.invite_code) {
       navigator.clipboard.writeText(household.invite_code)
@@ -145,7 +164,7 @@ export default function SettingsPanel({ profile, members }: Props) {
           <div
             onClick={openAvatarModal}
             style={{
-              width: 72, height: 72, borderRadius: '50%',
+              width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
               background: avatarColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', userSelect: 'none',
@@ -283,8 +302,20 @@ export default function SettingsPanel({ profile, members }: Props) {
                     }}>
                       {m.id === profile.id ? (avatarInitials || getInitials(m.display_name)) : getInitials(m.display_name)}
                     </div>
-                    <Text>{m.display_name}</Text>
-                    {m.id === profile.id && <Tag style={{ margin: 0 }}>You</Tag>}
+                    <Text style={{ flex: 1 }}>{m.display_name}</Text>
+                    {m.id === profile.id
+                      ? <Tag style={{ margin: 0 }}>You</Tag>
+                      : (
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<UserDeleteOutlined />}
+                          loading={removingId === m.id}
+                          onClick={() => removeMember(m.id, m.display_name)}
+                        />
+                      )
+                    }
                   </div>
                 ))}
               </div>
