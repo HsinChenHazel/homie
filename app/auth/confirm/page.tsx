@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AuthConfirmPage() {
+function AuthConfirmInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -44,4 +44,12 @@ export default function AuthConfirmPage() {
   }, [router, searchParams, supabase])
 
   return null
+}
+
+export default function AuthConfirmPage() {
+  return (
+    <Suspense>
+      <AuthConfirmInner />
+    </Suspense>
+  )
 }
