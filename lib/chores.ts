@@ -10,6 +10,18 @@ export type ChoreWithSlot = {
   slot_index: number
 }
 
+export type ChoreAssignee = {
+  user_id: string
+  slot_index: number
+  profile: { id: string; display_name: string } | null
+}
+
+export type ChoreWithAssignees = {
+  id: string
+  title: string
+  chore_assignees: ChoreAssignee[]
+}
+
 export type MonthlyAssignment = {
   chore: ChoreWithSlot
   userId: string
@@ -41,6 +53,34 @@ export function getWeekStart(date = new Date()): string {
   const diff = day === 0 ? -6 : 1 - day
   d.setDate(d.getDate() + diff)
   return d.toISOString().slice(0, 10)
+}
+
+export function getMonthlyAssignmentsV2(
+  chores: ChoreWithAssignees[],
+  startYear: number,
+  startMonth: number,
+  targetYear: number,
+  targetMonth: number
+): MonthlyAssignment[] {
+  const monthOffset = (targetYear * 12 + targetMonth) - (startYear * 12 + startMonth)
+
+  return chores.flatMap(chore => {
+    const validAssignees = [...chore.chore_assignees]
+      .filter(a => a.profile !== null)
+      .sort((a, b) => a.slot_index - b.slot_index)
+
+    if (!validAssignees.length) return []
+
+    const n = validAssignees.length
+    const personIndex = ((monthOffset % n) + n) % n
+    const assignee = validAssignees[personIndex]
+
+    return [{
+      chore: { id: chore.id, title: chore.title, slot_index: 0 },
+      userId: assignee.user_id,
+      displayName: assignee.profile!.display_name,
+    }]
+  })
 }
 
 /**

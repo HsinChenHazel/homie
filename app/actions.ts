@@ -432,6 +432,22 @@ export async function updateHouseholdCurrencyAction(householdId: string, currenc
   return { data: true }
 }
 
+export async function saveRotationStartAction(householdId: string, startYear: number, startMonth: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('households')
+    .update({ rotation_start_year: startYear, rotation_start_month: startMonth })
+    .eq('id', householdId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/chores')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
 export async function saveRotationAction(
   householdId: string,
   memberOrder: string[], // user_ids in rotation order

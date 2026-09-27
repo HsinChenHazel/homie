@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import DashboardContent from '@/components/DashboardContent'
 import NoHousehold from '@/components/NoHousehold'
 import { calculateBalances } from '@/lib/balances'
-import { getMonthlyAssignments, getWeekStart } from '@/lib/chores'
+import { getMonthlyAssignmentsV2, getWeekStart } from '@/lib/chores'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const weekOf = getWeekStart()
   const now = new Date()
 
-  const [splitsRes, settlementsRes, membersRes, choresRes, rotationRes, completionsRes, notesRes] = await Promise.all([
+  const [splitsRes, settlementsRes, membersRes, choresRes, completionsRes, notesRes] = await Promise.all([
     supabase
       .from('expense_splits')
       .select('user_id, amount_owed, profile:profiles(id, display_name), expense:expenses!inner(paid_by, amount, household_id, paid_by_profile:profiles!paid_by(id, display_name))')
@@ -39,8 +39,7 @@ export default async function DashboardPage() {
       .eq('status', 'pending')
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('id, display_name').eq('household_id', householdId),
-    supabase.from('chores').select('id, title, slot_index').eq('household_id', householdId).order('slot_index'),
-    supabase.from('chore_rotation_slots').select('slot_index, user_id, profile:profiles(id, display_name)').eq('household_id', householdId).order('slot_index'),
+    supabase.from('chores').select('id, title, chore_assignees(user_id, slot_index, profile:profiles(id, display_name))').eq('household_id', householdId).order('created_at'),
     supabase.from('chore_completions').select('chore_id, user_id, week_of').eq('week_of', weekOf)
       .in('chore_id', await supabase.from('chores').select('id').eq('household_id', householdId).then(r => (r.data ?? []).map((c: any) => c.id))),
     supabase
@@ -60,11 +59,12 @@ export default async function DashboardPage() {
 
   const balanceData = calculateBalances(unsettledSplits as any, Array.from(expenseMap.values()))
 
-  const choreAssignments = getMonthlyAssignments(
+  const startYear = household?.rotation_start_year ?? now.getFullYear()
+  const startMonth = household?.rotation_start_month ?? (now.getMonth() + 1)
+  const choreAssignments = getMonthlyAssignmentsV2(
     (choresRes.data ?? []) as any,
-    (rotationRes.data ?? []) as any,
-    household?.rotation_start_year ?? now.getFullYear(),
-    household?.rotation_start_month ?? (now.getMonth() + 1),
+    startYear,
+    startMonth,
     now.getFullYear(),
     now.getMonth() + 1
   )

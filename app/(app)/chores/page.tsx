@@ -21,20 +21,13 @@ export default async function ChoresPage() {
   const now = new Date()
   const monthWeeks = getWeeksInMonth(now.getFullYear(), now.getMonth() + 1)
 
-  const [choresRes, rotationRes, completionsRes, membersRes] = await Promise.all([
+  const [choresRes, completionsRes, membersRes] = await Promise.all([
     householdId
       ? supabase
           .from('chores')
-          .select('id, title, slot_index')
+          .select('id, title, chore_assignees(user_id, slot_index, profile:profiles(id, display_name))')
           .eq('household_id', householdId)
-          .order('slot_index')
-      : { data: [] },
-    householdId
-      ? supabase
-          .from('chore_rotation_slots')
-          .select('slot_index, user_id, profile:profiles(id, display_name)')
-          .eq('household_id', householdId)
-          .order('slot_index')
+          .order('created_at')
       : { data: [] },
     householdId
       ? supabase
@@ -60,7 +53,6 @@ export default async function ChoresPage() {
       <h2 style={{ marginBottom: 16 }}>Chore Roster</h2>
       <ChoreBoard
         chores={(choresRes.data ?? []) as any}
-        rotationSlots={(rotationRes.data ?? []) as any}
         completions={completionsRes.data ?? []}
         members={membersRes.data ?? []}
         currentUserId={user.id}
