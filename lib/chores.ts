@@ -28,6 +28,51 @@ export type MonthlyAssignment = {
   displayName: string
 }
 
+export type ChoreGroup = {
+  id: string
+  name: string
+  rotation_start_year: number
+  rotation_start_month: number
+  chores: { id: string; title: string; slot_index: number }[]
+  chore_group_members: { user_id: string; slot_index: number; profile: { id: string; display_name: string } | null }[]
+}
+
+export function getGroupAssignments(
+  group: ChoreGroup,
+  targetYear: number,
+  targetMonth: number
+): MonthlyAssignment[] {
+  const members = [...group.chore_group_members]
+    .filter(m => m.profile !== null)
+    .sort((a, b) => a.slot_index - b.slot_index)
+  const choresSorted = [...group.chores].sort((a, b) => a.slot_index - b.slot_index)
+
+  if (!members.length || !choresSorted.length) return []
+
+  const n = members.length
+  const monthOffset =
+    (targetYear * 12 + targetMonth) -
+    (group.rotation_start_year * 12 + group.rotation_start_month)
+
+  return choresSorted.map((chore, i) => {
+    const personIndex = ((i + monthOffset) % n + n) % n
+    const member = members[personIndex]
+    return {
+      chore: { id: chore.id, title: chore.title, slot_index: chore.slot_index },
+      userId: member.user_id,
+      displayName: member.profile!.display_name,
+    }
+  })
+}
+
+export function getAllGroupAssignments(
+  groups: ChoreGroup[],
+  targetYear: number,
+  targetMonth: number
+): MonthlyAssignment[] {
+  return groups.flatMap(g => getGroupAssignments(g, targetYear, targetMonth))
+}
+
 /** Returns all Monday dates (YYYY-MM-DD) for weeks that overlap the given month */
 export function getWeeksInMonth(year: number, month: number): string[] {
   const weeks: string[] = []

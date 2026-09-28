@@ -432,6 +432,92 @@ export async function updateHouseholdCurrencyAction(householdId: string, currenc
   return { data: true }
 }
 
+export async function createChoreGroupAction(
+  householdId: string,
+  name: string,
+  choreIds: string[], // ordered
+  memberIds: string[], // ordered
+  startYear: number,
+  startMonth: number
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const groupId = crypto.randomUUID()
+  const { error: groupErr } = await supabase.from('chore_groups').insert({
+    id: groupId, household_id: householdId, name,
+    rotation_start_year: startYear, rotation_start_month: startMonth,
+  })
+  if (groupErr) return { error: groupErr.message }
+
+  if (choreIds.length) {
+    await Promise.all(choreIds.map((id, i) =>
+      supabase.from('chores').update({ slot_index: i, group_id: groupId }).eq('id', id)
+    ))
+  }
+  if (memberIds.length) {
+    await supabase.from('chore_group_members').insert(
+      memberIds.map((uid, i) => ({ group_id: groupId, user_id: uid, slot_index: i }))
+    )
+  }
+
+  revalidatePath('/chores')
+  revalidatePath('/dashboard')
+  return { data: { id: groupId } }
+}
+
+export async function updateChoreGroupAction(
+  groupId: string,
+  name: string,
+  choreIds: string[],
+  memberIds: string[],
+  startYear: number,
+  startMonth: number
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  await supabase.from('chore_groups').update({
+    name, rotation_start_year: startYear, rotation_start_month: startMonth,
+  }).eq('id', groupId)
+
+  // Unlink all chores currently in this group
+  await supabase.from('chores').update({ group_id: null }).eq('group_id', groupId)
+
+  // Re-link chosen chores
+  await Promise.all(choreIds.map((id, i) =>
+    supabase.from('chores').update({ slot_index: i, group_id: groupId }).eq('id', id)
+  ))
+
+  // Replace members
+  await supabase.from('chore_group_members').delete().eq('group_id', groupId)
+  if (memberIds.length) {
+    await supabase.from('chore_group_members').insert(
+      memberIds.map((uid, i) => ({ group_id: groupId, user_id: uid, slot_index: i }))
+    )
+  }
+
+  revalidatePath('/chores')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
+export async function deleteChoreGroupAction(groupId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  // Unlink chores first
+  await supabase.from('chores').update({ group_id: null }).eq('group_id', groupId)
+  await supabase.from('chore_groups').delete().eq('id', groupId)
+
+  revalidatePath('/chores')
+  revalidatePath('/dashboard')
+  return { data: true }
+}
+
 export async function saveRotationStartAction(householdId: string, startYear: number, startMonth: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
