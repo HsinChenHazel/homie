@@ -51,7 +51,7 @@ export default function BalanceSummary({ data, householdId, compact, expenseCoun
   if (allSettled) return null
 
   const settleButton = (
-    <Button type="primary" size="small" loading={loading} onClick={() => setModalOpen(true)}>
+    <Button size="small" loading={loading} onClick={() => setModalOpen(true)}>
       Settle
     </Button>
   )

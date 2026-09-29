@@ -24,6 +24,9 @@ type Props = {
   choreAssignments: MonthlyAssignment[]
   choreCompletions: { chore_id: string; user_id: string }[]
   pendingSettlements: any[]
+  pendingSettlementIds?: string[]
+  pendingSettlementItems?: { fromName: string; toName: string; amount: number }[]
+  mergedBalanceData?: BalanceData
   currentUserId: string
   unsettledExpenseCount: number
   members: Pick<Profile, 'id' | 'display_name'>[]
@@ -39,6 +42,9 @@ export default function DashboardContent({
   choreAssignments,
   choreCompletions: initialCompletions,
   pendingSettlements,
+  pendingSettlementIds = [],
+  pendingSettlementItems = [],
+  mergedBalanceData,
   currentUserId,
   unsettledExpenseCount,
   members,
@@ -99,9 +105,24 @@ export default function DashboardContent({
   if (isMobile) {
     return (
       <div>
-        <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>Hello, {displayName} · {householdName}</Text>
-
-        {choreCard}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <Text type="secondary">Hello, {displayName} · {householdName}</Text>
+          {householdId && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddExpenseOpen(true)}>
+              Add expense
+            </Button>
+          )}
+        </div>
+        {householdId && members.length > 0 && (
+          <AddExpenseModal
+            open={addExpenseOpen}
+            onClose={() => setAddExpenseOpen(false)}
+            members={members}
+            currentUserId={currentUserId}
+            householdId={householdId}
+            defaultCurrency={defaultCurrency}
+          />
+        )}
 
         {pendingSettlements.map((s: any) => (
           <SettlementCard key={s.id} settlement={s} currentUserId={currentUserId} />
@@ -110,8 +131,10 @@ export default function DashboardContent({
           <BalanceSummary
             data={balanceData}
             householdId={householdId}
-            compact
             expenseCount={unsettledExpenseCount}
+            pendingSettlementIds={pendingSettlementIds}
+            pendingSettlementItems={pendingSettlementItems}
+            mergedData={mergedBalanceData}
           />
         )}
 
@@ -132,17 +155,17 @@ export default function DashboardContent({
       </div>
       <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>{householdName}</Text>
 
-      {choreCard}
-
       {pendingSettlements.map((s: any) => (
         <SettlementCard key={s.id} settlement={s} currentUserId={currentUserId} />
       ))}
-      {pendingSettlements.length === 0 && balanceData.transactions.length > 0 && (
+      {balanceData.transactions.length > 0 && (
         <BalanceSummary
           data={balanceData}
           householdId={householdId}
-          compact
           expenseCount={unsettledExpenseCount}
+          pendingSettlementIds={pendingSettlementIds}
+          pendingSettlementItems={pendingSettlementItems}
+          mergedData={mergedBalanceData}
         />
       )}
 
