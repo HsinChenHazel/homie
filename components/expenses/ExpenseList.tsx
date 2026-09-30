@@ -27,7 +27,7 @@ function getStatus(r: any) {
   return <Tag>Unsettled</Tag>
 }
 
-function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDelete?: () => void }) {
   const [offsetX, setOffsetX] = useState(0)
   const startXRef = useRef(0)
   const isOpenRef = useRef(false)
@@ -59,16 +59,18 @@ function SwipeableRow({ children, onDelete }: { children: React.ReactNode; onDel
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 10 }}>
       {/* Delete area */}
-      <div
-        style={{
-          position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_WIDTH,
-          background: '#DC3545', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', cursor: 'pointer',
-        }}
-        onClick={onDelete}
-      >
-        <DeleteOutlined style={{ color: '#fff', fontSize: 18 }} />
-      </div>
+      {onDelete && (
+        <div
+          style={{
+            position: 'absolute', right: 0, top: 0, bottom: 0, width: DELETE_WIDTH,
+            background: '#DC3545', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer',
+          }}
+          onClick={onDelete}
+        >
+          <DeleteOutlined style={{ color: '#fff', fontSize: 18 }} />
+        </div>
+      )}
       {/* Sliding content */}
       <div
         style={{ transform: `translateX(${offsetX}px)`, transition: animatingRef.current ? 'transform 0.2s ease' : 'none' }}
@@ -148,7 +150,7 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
     {
       title: '', key: 'actions', width: 60,
       render: (_: any, r: any) =>
-        r.paid_by === currentUserId ? (
+        r.paid_by === currentUserId && r.status !== 'settled' ? (
           <Button icon={<DeleteOutlined />} type="text" danger size="small" onClick={() => promptDelete(r)} />
         ) : null,
     },
@@ -178,7 +180,7 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
               expenses.map((r: any) => (
                 <SwipeableRow
                   key={r.id}
-                  onDelete={() => promptDelete(r)}
+                  onDelete={r.paid_by === currentUserId && r.status !== 'settled' ? () => promptDelete(r) : undefined}
                 >
                   <div style={{
                     background: '#fff',

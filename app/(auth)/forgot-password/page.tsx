@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
   return (
     <Card style={{ width: 380 }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <img src="/homie_logo.svg" alt="Homie" style={{ height: 60 }} />
+        <img src="/homie_logo.png" alt="Homie" style={{ height: 60 }} />
       </div>
 
       {error && <Alert type="error" title={error} style={{ marginBottom: 16 }} showIcon />}

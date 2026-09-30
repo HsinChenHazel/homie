@@ -47,7 +47,7 @@ export default function JoinPage() {
   return (
     <Card style={{ width: 420 }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <img src="/homie_logo.svg" alt="Homie" style={{ height: 36 }} />
+        <img src="/homie_logo.png" alt="Homie" style={{ height: 36 }} />
         <Text type="secondary">Join your household</Text>
       </div>
 

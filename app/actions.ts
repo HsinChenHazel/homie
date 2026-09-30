@@ -653,6 +653,31 @@ export async function addNoteAction(householdId: string, content: string) {
   return { data: true }
 }
 
+export async function deleteAccountAction() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const adminClient = createFreshClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  // Clean up FK references to profiles(id) before deleting auth user
+  await adminClient.from('grocery_items').delete().eq('added_by', user.id)
+  await adminClient.from('chore_assignments').delete().eq('user_id', user.id)
+  await adminClient.from('settlement_items').delete().or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
+  await adminClient.from('settlements').delete().eq('created_by', user.id)
+  await adminClient.from('expense_splits').delete().eq('user_id', user.id)
+  await adminClient.from('expenses').delete().eq('paid_by', user.id)
+
+  const { error } = await adminClient.auth.admin.deleteUser(user.id)
+  if (error) return { error: error.message }
+
+  await supabase.auth.signOut()
+  return { data: true }
+}
+
 export async function deleteNoteAction(noteId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -30,7 +30,7 @@ export default function SignupPage() {
     return (
       <Card style={{ width: 380 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <img src="/homie_logo.svg" alt="Homie" style={{ height: 36 }} />
+          <img src="/homie_logo.png" alt="Homie" style={{ height: 36 }} />
         </div>
         <Alert
           type="success"
@@ -50,7 +50,7 @@ export default function SignupPage() {
   return (
     <Card style={{ width: 380 }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <img src="/homie_logo.svg" alt="Homie" style={{ height: 36 }} />
+        <img src="/homie_logo.png" alt="Homie" style={{ height: 36 }} />
         <Text type="secondary">Create your account</Text>
       </div>
 
