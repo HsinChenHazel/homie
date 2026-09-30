@@ -89,14 +89,9 @@ export default function LoginPage() {
       </Button>
 
       <Divider plain>New here?</Divider>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Link href="/signup">
-          <Button block type="primary" ghost>Create account</Button>
-        </Link>
-        <Link href="/join">
-          <Button block>Join with invite code</Button>
-        </Link>
-      </div>
+      <Link href="/signup">
+        <Button block type="primary" ghost>Create account</Button>
+      </Link>
     </Card>
   )
 }
