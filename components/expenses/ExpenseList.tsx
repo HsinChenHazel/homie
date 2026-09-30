@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { App, Button, Table, Tag, Grid, Typography, Modal } from 'antd'
-import { PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { Profile } from '@/lib/types'
 import AddExpenseModal from './AddExpenseModal'
@@ -109,8 +109,7 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
       message.error('Only the payer can delete this expense')
       return
     }
-    const inSettlement = (r.splits ?? []).some((s: any) => s.settlement_id && !s.settled)
-    setDeleteTarget({ id: r.id, inSettlement })
+    setDeleteTarget({ id: r.id, inSettlement: false })
   }
 
   async function confirmClearAll() {
@@ -149,10 +148,12 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
     { title: 'Status', key: 'status', width: 130, render: (_: any, r: any) => getStatus(r) },
     {
       title: '', key: 'actions', width: 60,
-      render: (_: any, r: any) =>
-        r.paid_by === currentUserId && r.status !== 'settled' ? (
+      render: (_: any, r: any) => {
+        const inSettlement = (r.splits ?? []).some((s: any) => s.settlement_id && !s.settled)
+        return r.paid_by === currentUserId && r.status !== 'settled' && !inSettlement ? (
           <Button icon={<DeleteOutlined />} type="text" danger size="small" onClick={() => promptDelete(r)} />
-        ) : null,
+        ) : null
+      },
     },
   ]
 
@@ -180,7 +181,7 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
               expenses.map((r: any) => (
                 <SwipeableRow
                   key={r.id}
-                  onDelete={r.paid_by === currentUserId && r.status !== 'settled' ? () => promptDelete(r) : undefined}
+                  onDelete={r.paid_by === currentUserId && r.status !== 'settled' && !(r.splits ?? []).some((s: any) => s.settlement_id && !s.settled) ? () => promptDelete(r) : undefined}
                 >
                   <div style={{
                     background: '#fff',
@@ -255,12 +256,6 @@ export default function ExpenseList({ expenses, members, currentUserId, househol
         title="Delete expense?"
         centered
       >
-        {deleteTarget?.inSettlement && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
-            <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 16, marginTop: 2 }} />
-            <Text>This expense is part of a pending settlement. Deleting it will update the settlement amount.</Text>
-          </div>
-        )}
         <Text>This action cannot be undone.</Text>
       </Modal>
     </>
